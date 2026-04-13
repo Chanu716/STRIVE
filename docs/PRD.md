@@ -65,7 +65,7 @@ Modern navigation systems (Google Maps, Apple Maps, Waze) optimise for travel ti
 
 - Road traffic crashes cause **1.35 million deaths** per year globally (WHO, 2023)
 - **50 million** more are injured or disabled annually
-- Economic cost exceeds **3 % of GDP** in most high-income countries
+- Economic cost exceeds **3% of GDP** in most high-income countries
 - The majority of crashes involve a combination of speed, weather, and road conditions — all of which are **predictable and quantifiable**
 
 ### 2.3 Data Availability

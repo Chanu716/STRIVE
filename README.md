@@ -61,7 +61,7 @@ Traditional navigation prioritises speed and distance. STRIVE prioritises **safe
 ## ✨ Key Features
 
 - 🗺️ **Real-time risk scoring** — every road segment scored 0–100 every 30 seconds
-- 🔀 **Safety-aware A\* routing** — customisable risk / travel-time trade-off parameter *α*
+- 🔀 **Safety-aware A\* routing** — customizable risk / travel-time trade-off parameter *α*
 - 🧠 **Graph Neural Network backbone** — captures road-network topology, not just local features
 - ☁️ **Weather × traffic interaction** — rain-on-congestion multiplier, visibility-adjusted speed limits
 - 🔍 **Explainable AI** — SHAP values, natural-language summaries, and heatmap tiles for every prediction
