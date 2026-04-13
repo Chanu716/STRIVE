@@ -426,72 +426,194 @@ All of the following should be met for a successful research demonstration:
 
 ## 12. Development Task Breakdown
 
-Tasks are organised into four phases. Each phase builds on the previous one.
+The 41 tasks are divided across **5 team members** by role. Each member owns a coherent domain so that work is parallel and dependencies are clear.
 
-### Phase 1 — Data & Model
+### 12.1 Team Roles & Task Summary
 
-- [ ] **T-01** Download NHTSA FARS data for target city (2+ years)
-- [ ] **T-02** Download OSM road network via OSMnx for target city
-- [ ] **T-03** Match FARS accident records to nearest OSM road segment
-- [ ] **T-04** Compute `historical_accident_rate` per road segment
-- [ ] **T-05** Implement feature engineering pipeline (`features.py`)
-  - Time features: `hour_of_day`, `day_of_week`, `month`, `night_indicator`
-  - Road features: `road_class`, `speed_limit_kmh`
-  - Weather features: `precipitation_mm`, `visibility_km`, `wind_speed_ms`, `temperature_c`
-  - Derived features: `rain_on_congestion`
-- [ ] **T-06** Create chronological train / val / test split (70/15/15)
-- [ ] **T-07** Train XGBoost baseline model with default hyperparameters
-- [ ] **T-08** Run Optuna hyperparameter search (50 trials, 3-fold time-series CV)
-- [ ] **T-09** Evaluate final model: AUROC, AUPRC, F1, ECE
-- [ ] **T-10** Validate SHAP explanations — confirm top factors match domain knowledge
-- [ ] **T-11** Save model artefact (`models/model.pkl`) and feature config
+| Member | Role | Tasks | Count |
+|---|---|---|---|
+| **M1** | Data Engineer | T-01, T-02, T-03, T-04, T-05, T-33, T-35 | 7 |
+| **M2** | ML Engineer | T-06, T-07, T-08, T-09, T-10, T-11, T-34, T-41 | 8 |
+| **M3** | Backend Engineer — Risk API | T-12, T-13, T-14, T-15, T-16, T-20, T-21, T-24 | 8 |
+| **M4** | Backend Engineer — Routing & DevOps | T-17, T-18, T-19, T-22, T-23, T-36, T-37, T-38, T-39 | 9 |
+| **M5** | Frontend Engineer | T-25, T-26, T-27, T-28, T-29, T-30, T-31, T-32, T-40 | 9 |
 
-### Phase 2 — Backend API
+### 12.2 Dependency Flow
 
-- [ ] **T-12** Initialise FastAPI project structure and `requirements.txt`
-- [ ] **T-13** Define PostgreSQL schema with Alembic migrations
-  - `road_segments` table (segment_id, geometry, road_class, speed_limit, historical_rate)
-  - `accidents` table (segment_id, timestamp, severity)
-- [ ] **T-14** Implement weather client (`app/weather.py`) with 5-min in-process cache
-- [ ] **T-15** Implement `GET /v1/risk/segment` endpoint
-  - Resolve nearest road segment from lat/lon (OSMnx)
-  - Fetch live weather
-  - Build feature vector
-  - XGBoost inference → risk score
-  - SHAP explanation → top 4 factors + summary
-- [ ] **T-16** Implement `GET /v1/risk/heatmap` endpoint (GeoJSON output)
-- [ ] **T-17** Implement road graph loading and caching (`app/routing/graph.py`)
-- [ ] **T-18** Implement A\* routing with risk-weighted edges (`app/routing/astar.py`)
-- [ ] **T-19** Implement `POST /v1/route/safe` endpoint
-- [ ] **T-20** Implement `GET /v1/explain/segment` endpoint (full SHAP output)
-- [ ] **T-21** Add `GET /health` endpoint
-- [ ] **T-22** Write unit tests for feature engineering, inference, and routing (≥ 70 % coverage)
-- [ ] **T-23** Write integration tests for all API endpoints (pytest + httpx)
-- [ ] **T-24** Validate Swagger UI at `/docs` — confirm all endpoints documented
+```mermaid
+flowchart LR
+    M1["M1 — Data Engineer\nT-01 to T-05, T-33, T-35\nData prep + features"] --> M2
+    M1 --> M3
+    M2["M2 — ML Engineer\nT-06 to T-11, T-34, T-41\nModel training + SHAP"] --> M3
+    M3["M3 — Risk API\nT-12 to T-16, T-20, T-21, T-24\nFastAPI risk endpoints"] --> M4
+    M3 --> M5
+    M4["M4 — Routing & DevOps\nT-17 to T-19, T-22, T-23\nT-36 to T-39\nRouting + Docker + tests"] --> M5
+    M5["M5 — Frontend\nT-25 to T-32, T-40\nLeaflet map + UI"]
+```
 
-### Phase 3 — Frontend
+---
 
-- [ ] **T-25** Set up Leaflet.js single-page app (`frontend/index.html`, `frontend/app.js`)
-- [ ] **T-26** Render OSM base tile layer
-- [ ] **T-27** Implement risk heatmap overlay (GeoJSON from `/v1/risk/heatmap`)
-  - Colour scale: green (LOW) → yellow (MODERATE) → orange (HIGH) → red (CRITICAL)
-- [ ] **T-28** Implement SHAP panel — display top factors for a clicked map segment
-- [ ] **T-29** Implement route input form (origin, destination text boxes; α slider)
-- [ ] **T-30** Render safe route polyline on map with per-segment risk colouring
-- [ ] **T-31** Display route summary card (distance, duration, risk score, vs-fastest comparison)
-- [ ] **T-32** Serve frontend as FastAPI static files (`/map`)
+### 12.3 M1 — Data Engineer
 
-### Phase 4 — Integration & Polish
+**Responsibility:** Collect, clean, and prepare all training data. Build the feature engineering pipeline shared by M2 (training) and M3 (inference).
 
-- [ ] **T-33** Write `scripts/download_data.py` — automated NHTSA + OSM data fetch
-- [ ] **T-34** Write `scripts/train_model.py` — end-to-end training pipeline with logging
-- [ ] **T-35** Write `scripts/seed_data.py` — populate PostgreSQL with sample data
-- [ ] **T-36** Write `Dockerfile` and `docker-compose.yml` (API + PostgreSQL)
-- [ ] **T-37** Write `.env.example` with all required variables documented
-- [ ] **T-38** End-to-end demo test: full request from map click to SHAP panel display
-- [ ] **T-39** Performance check: confirm risk scoring ≤ 500 ms, routing ≤ 2 s
-- [ ] **T-40** Update `README.md` with final setup instructions and evaluation results
-- [ ] **T-41** Prepare research report / slides with model evaluation and SHAP analysis
+| Task | Description | Phase |
+|---|---|---|
+| T-01 | Download NHTSA FARS CSV data for target city (2+ years) | 1 |
+| T-02 | Download OSM road network via OSMnx for target city | 1 |
+| T-03 | Match FARS accident records to nearest OSM road segment (≤ 50 m snap) | 1 |
+| T-04 | Compute `historical_accident_rate` per road segment (incidents / km / year) | 1 |
+| T-05 | Implement `app/ml/features.py` — full feature engineering pipeline | 1 |
+| T-33 | Write `scripts/download_data.py` — automated NHTSA + OSM data fetch | 4 |
+| T-35 | Write `scripts/seed_data.py` — populate PostgreSQL `road_segments` and `accidents` tables | 4 |
+
+**T-05 feature detail:**
+- Time features: `hour_of_day`, `day_of_week`, `month`, `night_indicator`
+- Road features: `road_class`, `speed_limit_kmh`
+- Weather features: `precipitation_mm`, `visibility_km`, `wind_speed_ms`, `temperature_c`
+- Derived features: `rain_on_congestion = precipitation_mm × (1 − speed_ratio)`
+- Label: `incident` (binary, from FARS)
+
+**Deliverables:** `data/processed/features.parquet`, `app/ml/features.py`, `scripts/download_data.py`, `scripts/seed_data.py`
+
+---
+
+### 12.4 M2 — ML Engineer
+
+**Responsibility:** Train and evaluate the XGBoost risk model. Validate SHAP explainability. Produce the saved model artefact consumed by M3.
+
+| Task | Description | Phase |
+|---|---|---|
+| T-06 | Create chronological train / val / test split (70 / 15 / 15) — no temporal leakage | 1 |
+| T-07 | Train XGBoost baseline model with default hyperparameters; log to MLflow | 1 |
+| T-08 | Run Optuna hyperparameter search (50 trials, 3-fold time-series CV) | 1 |
+| T-09 | Evaluate final model: AUROC, AUPRC, F1 @ optimal threshold, ECE | 1 |
+| T-10 | Validate SHAP explanations — confirm top factors match domain expectations | 1 |
+| T-11 | Save model artefact to `models/model.pkl` and feature config to `models/feature_config.json` | 1 |
+| T-34 | Write `scripts/train_model.py` — end-to-end training pipeline with MLflow logging | 4 |
+| T-41 | Prepare research report / slides: model evaluation, SHAP analysis, routing quality | 4 |
+
+**Evaluation targets:** AUROC ≥ 0.82, AUPRC ≥ 0.35, F1 ≥ 0.55, ECE ≤ 0.08
+
+**Deliverables:** `models/model.pkl`, `models/feature_config.json`, `scripts/train_model.py`, evaluation notebook, research slides
+
+---
+
+### 12.5 M3 — Backend Engineer (Risk API)
+
+**Responsibility:** Set up the FastAPI project, database schema, and all risk-scoring endpoints. Integrates M1's feature pipeline and M2's model.
+
+| Task | Description | Phase |
+|---|---|---|
+| T-12 | Initialise FastAPI project structure and `requirements.txt` | 2 |
+| T-13 | Define PostgreSQL schema with Alembic migrations (`road_segments`, `accidents` tables) | 2 |
+| T-14 | Implement `app/weather.py` — OpenWeatherMap client with 5-min in-process cache | 2 |
+| T-15 | Implement `GET /v1/risk/segment` — full scoring pipeline (segment lookup → weather → features → XGBoost → SHAP) | 2 |
+| T-16 | Implement `GET /v1/risk/heatmap` — GeoJSON FeatureCollection for a bounding box | 2 |
+| T-20 | Implement `GET /v1/explain/segment` — full SHAP output for a lat/lon point | 2 |
+| T-21 | Add `GET /health` endpoint | 2 |
+| T-24 | Validate Swagger UI at `/docs` — confirm all endpoints are documented with examples | 2 |
+
+**Deliverables:** `app/main.py`, `app/routers/risk.py`, `app/routers/explain.py`, `app/weather.py`, `app/db/models.py`, Alembic migrations
+
+---
+
+### 12.6 M4 — Backend Engineer (Routing & DevOps)
+
+**Responsibility:** Build the safety-aware routing engine. Write all automated tests. Own Docker setup and performance validation.
+
+| Task | Description | Phase |
+|---|---|---|
+| T-17 | Implement `app/routing/graph.py` — OSMnx road graph loading and in-memory caching | 2 |
+| T-18 | Implement `app/routing/astar.py` — A\* with edge cost `α × risk + (1−α) × travel_time` | 2 |
+| T-19 | Implement `POST /v1/route/safe` — routing endpoint with vs-fastest comparison | 2 |
+| T-22 | Write unit tests for feature engineering, model inference, and routing (≥ 70 % coverage) | 2 |
+| T-23 | Write integration tests for all API endpoints using pytest + httpx | 2 |
+| T-36 | Write `Dockerfile` and `docker-compose.yml` (API + PostgreSQL services) | 4 |
+| T-37 | Write `.env.example` with all required environment variables documented | 4 |
+| T-38 | End-to-end demo test: map click → risk score → SHAP panel → route displayed | 4 |
+| T-39 | Performance check: confirm risk scoring ≤ 500 ms, routing ≤ 2 s under normal load | 4 |
+
+**Deliverables:** `app/routing/graph.py`, `app/routing/astar.py`, `app/routers/route.py`, `tests/`, `Dockerfile`, `docker-compose.yml`, `.env.example`
+
+---
+
+### 12.7 M5 — Frontend Engineer
+
+**Responsibility:** Build the Leaflet.js interactive map. Consumes all three API endpoints (risk heatmap, route, explain). Owns final documentation.
+
+| Task | Description | Phase |
+|---|---|---|
+| T-25 | Set up Leaflet.js single-page app (`frontend/index.html`, `frontend/app.js`) | 3 |
+| T-26 | Render OpenStreetMap base tile layer | 3 |
+| T-27 | Implement risk heatmap GeoJSON overlay — colour scale: green → yellow → orange → red | 3 |
+| T-28 | Implement SHAP panel — show top factors for a clicked road segment | 3 |
+| T-29 | Implement route input form (origin/destination text boxes; α slider 0–1) | 3 |
+| T-30 | Render safe route polyline on map with per-segment risk colour coding | 3 |
+| T-31 | Display route summary card (distance, duration, risk score, vs-fastest comparison) | 3 |
+| T-32 | Serve frontend as FastAPI static files at `/map` | 3 |
+| T-40 | Update `README.md` with final setup instructions and model evaluation results | 4 |
+
+**Deliverables:** `frontend/index.html`, `frontend/app.js`, `frontend/style.css`, updated `README.md`
+
+---
+
+### 12.8 Phase View (with member labels)
+
+Tasks are listed in execution order. Each task is labelled with its owning member.
+
+#### Phase 1 — Data & Model
+
+- [ ] **T-01** `[M1]` Download NHTSA FARS data for target city (2+ years)
+- [ ] **T-02** `[M1]` Download OSM road network via OSMnx for target city
+- [ ] **T-03** `[M1]` Match FARS accident records to nearest OSM road segment
+- [ ] **T-04** `[M1]` Compute `historical_accident_rate` per road segment
+- [ ] **T-05** `[M1]` Implement feature engineering pipeline (`app/ml/features.py`)
+- [ ] **T-06** `[M2]` Create chronological train / val / test split (70/15/15)
+- [ ] **T-07** `[M2]` Train XGBoost baseline model with default hyperparameters
+- [ ] **T-08** `[M2]` Run Optuna hyperparameter search (50 trials, 3-fold time-series CV)
+- [ ] **T-09** `[M2]` Evaluate final model: AUROC, AUPRC, F1, ECE
+- [ ] **T-10** `[M2]` Validate SHAP explanations — confirm top factors match domain knowledge
+- [ ] **T-11** `[M2]` Save `models/model.pkl` and `models/feature_config.json`
+
+#### Phase 2 — Backend API
+
+- [ ] **T-12** `[M3]` Initialise FastAPI project structure and `requirements.txt`
+- [ ] **T-13** `[M3]` Define PostgreSQL schema with Alembic migrations
+- [ ] **T-14** `[M3]` Implement weather client with 5-min in-process cache
+- [ ] **T-15** `[M3]` Implement `GET /v1/risk/segment` endpoint
+- [ ] **T-16** `[M3]` Implement `GET /v1/risk/heatmap` endpoint (GeoJSON output)
+- [ ] **T-17** `[M4]` Implement road graph loading and caching (`app/routing/graph.py`)
+- [ ] **T-18** `[M4]` Implement A\* routing with risk-weighted edges (`app/routing/astar.py`)
+- [ ] **T-19** `[M4]` Implement `POST /v1/route/safe` endpoint
+- [ ] **T-20** `[M3]` Implement `GET /v1/explain/segment` endpoint (full SHAP output)
+- [ ] **T-21** `[M3]` Add `GET /health` endpoint
+- [ ] **T-22** `[M4]` Write unit tests for feature engineering, inference, and routing (≥ 70 % coverage)
+- [ ] **T-23** `[M4]` Write integration tests for all API endpoints (pytest + httpx)
+- [ ] **T-24** `[M3]` Validate Swagger UI at `/docs`
+
+#### Phase 3 — Frontend
+
+- [ ] **T-25** `[M5]` Set up Leaflet.js single-page app (`frontend/index.html`, `frontend/app.js`)
+- [ ] **T-26** `[M5]` Render OSM base tile layer
+- [ ] **T-27** `[M5]` Implement risk heatmap overlay with colour scale
+- [ ] **T-28** `[M5]` Implement SHAP panel for clicked road segment
+- [ ] **T-29** `[M5]` Implement route input form (origin, destination, α slider)
+- [ ] **T-30** `[M5]` Render safe route polyline with per-segment risk colouring
+- [ ] **T-31** `[M5]` Display route summary card (distance, time, risk, vs-fastest)
+- [ ] **T-32** `[M5]` Serve frontend as FastAPI static files at `/map`
+
+#### Phase 4 — Integration & Polish
+
+- [ ] **T-33** `[M1]` Write `scripts/download_data.py` — automated NHTSA + OSM data fetch
+- [ ] **T-34** `[M2]` Write `scripts/train_model.py` — end-to-end training pipeline with logging
+- [ ] **T-35** `[M1]` Write `scripts/seed_data.py` — populate PostgreSQL with sample data
+- [ ] **T-36** `[M4]` Write `Dockerfile` and `docker-compose.yml`
+- [ ] **T-37** `[M4]` Write `.env.example` with all required variables documented
+- [ ] **T-38** `[M4]` End-to-end demo test: map click → SHAP panel → route displayed
+- [ ] **T-39** `[M4]` Performance check: risk scoring ≤ 500 ms, routing ≤ 2 s
+- [ ] **T-40** `[M5]` Update `README.md` with final setup instructions and evaluation results
+- [ ] **T-41** `[M2]` Prepare research report / slides with model evaluation and SHAP analysis
 
 ---
 
@@ -520,3 +642,4 @@ Tasks are organised into four phases. Each phase builds on the previous one.
 |---|---|---|---|
 | 1.0.0 | 2026-04-13 | Karri Chanikya Sri Hari Narayana Dattu | Initial draft |
 | 2.0.0 | 2026-04-13 | Karri Chanikya Sri Hari Narayana Dattu | Simplified to research prototype: replaced Kafka/Faust/GNN/Redis with XGBoost/FastAPI/PostgreSQL; added Mermaid flow diagrams; added full task breakdown |
+| 2.1.0 | 2026-04-13 | Karri Chanikya Sri Hari Narayana Dattu | Added 5-member task assignment: M1 Data Engineer, M2 ML Engineer, M3 Risk API, M4 Routing & DevOps, M5 Frontend |
