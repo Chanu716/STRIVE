@@ -1,6 +1,6 @@
 # STRIVE — Product Requirements Document
 
-**Document version:** 2.0.0
+**Document version:** 2.2.0
 **Status:** Draft
 **Author:** Karri Chanikya Sri Hari Narayana Dattu
 **Last updated:** 2026-04-13
@@ -426,7 +426,9 @@ All of the following should be met for a successful research demonstration:
 
 ## 12. Development Task Breakdown
 
-The 41 tasks are divided across **5 team members** by role. Each member owns a coherent domain so that work is parallel and dependencies are clear.
+> **Note on Frontend:** The Leaflet.js interactive map frontend (T-25 to T-32) is maintained **separately by the project lead** and is not part of any team member's assessed tasks. See [Section 8](#8-frontend-requirements) for the frontend specification. Individual task files are located in the [`tasks/`](../tasks/) directory.
+
+The 33 backend and data-science tasks are divided across **5 team members** by role. Each member owns a coherent domain so that work is parallel and dependencies are clear.
 
 ### 12.1 Team Roles & Task Summary
 
@@ -435,8 +437,8 @@ The 41 tasks are divided across **5 team members** by role. Each member owns a c
 | **M1** | Data Engineer | T-01, T-02, T-03, T-04, T-05, T-33, T-35 | 7 |
 | **M2** | ML Engineer | T-06, T-07, T-08, T-09, T-10, T-11, T-34, T-41 | 8 |
 | **M3** | Backend Engineer — Risk API | T-12, T-13, T-14, T-15, T-16, T-20, T-21, T-24 | 8 |
-| **M4** | Backend Engineer — Routing & DevOps | T-17, T-18, T-19, T-22, T-23, T-36, T-37, T-38, T-39 | 9 |
-| **M5** | Frontend Engineer | T-25, T-26, T-27, T-28, T-29, T-30, T-31, T-32, T-40 | 9 |
+| **M4** | Backend Engineer — Routing | T-17, T-18, T-19, T-36, T-37 | 5 |
+| **M5** | QA Engineer & Technical Writer | T-22, T-23, T-38, T-39, T-40 | 5 |
 
 ### 12.2 Dependency Flow
 
@@ -447,8 +449,8 @@ flowchart LR
     M2["M2 — ML Engineer\nT-06 to T-11, T-34, T-41\nModel training + SHAP"] --> M3
     M3["M3 — Risk API\nT-12 to T-16, T-20, T-21, T-24\nFastAPI risk endpoints"] --> M4
     M3 --> M5
-    M4["M4 — Routing & DevOps\nT-17 to T-19, T-22, T-23\nT-36 to T-39\nRouting + Docker + tests"] --> M5
-    M5["M5 — Frontend\nT-25 to T-32, T-40\nLeaflet map + UI"]
+    M4["M4 — Routing\nT-17 to T-19, T-36, T-37\nRouting + Docker"] --> M5
+    M5["M5 — QA & Docs\nT-22, T-23, T-38, T-39, T-40\nTests + README"]
 ```
 
 ---
@@ -456,6 +458,8 @@ flowchart LR
 ### 12.3 M1 — Data Engineer
 
 **Responsibility:** Collect, clean, and prepare all training data. Build the feature engineering pipeline shared by M2 (training) and M3 (inference).
+
+📄 Full task details: [`tasks/M1-data-engineer.md`](../tasks/M1-data-engineer.md)
 
 | Task | Description | Phase |
 |---|---|---|
@@ -467,13 +471,6 @@ flowchart LR
 | T-33 | Write `scripts/download_data.py` — automated NHTSA + OSM data fetch | 4 |
 | T-35 | Write `scripts/seed_data.py` — populate PostgreSQL `road_segments` and `accidents` tables | 4 |
 
-**T-05 feature detail:**
-- Time features: `hour_of_day`, `day_of_week`, `month`, `night_indicator`
-- Road features: `road_class`, `speed_limit_kmh`
-- Weather features: `precipitation_mm`, `visibility_km`, `wind_speed_ms`, `temperature_c`
-- Derived features: `rain_on_congestion = precipitation_mm × (1 − speed_ratio)`
-- Label: `incident` (binary, from FARS)
-
 **Deliverables:** `data/processed/features.parquet`, `app/ml/features.py`, `scripts/download_data.py`, `scripts/seed_data.py`
 
 ---
@@ -481,6 +478,8 @@ flowchart LR
 ### 12.4 M2 — ML Engineer
 
 **Responsibility:** Train and evaluate the XGBoost risk model. Validate SHAP explainability. Produce the saved model artefact consumed by M3.
+
+📄 Full task details: [`tasks/M2-ml-engineer.md`](../tasks/M2-ml-engineer.md)
 
 | Task | Description | Phase |
 |---|---|---|
@@ -503,6 +502,8 @@ flowchart LR
 
 **Responsibility:** Set up the FastAPI project, database schema, and all risk-scoring endpoints. Integrates M1's feature pipeline and M2's model.
 
+📄 Full task details: [`tasks/M3-backend-risk-api.md`](../tasks/M3-backend-risk-api.md)
+
 | Task | Description | Phase |
 |---|---|---|
 | T-12 | Initialise FastAPI project structure and `requirements.txt` | 2 |
@@ -518,43 +519,39 @@ flowchart LR
 
 ---
 
-### 12.6 M4 — Backend Engineer (Routing & DevOps)
+### 12.6 M4 — Backend Engineer (Routing)
 
-**Responsibility:** Build the safety-aware routing engine. Write all automated tests. Own Docker setup and performance validation.
+**Responsibility:** Build the safety-aware A\* routing engine, expose the routing endpoint, and own the Docker setup.
+
+📄 Full task details: [`tasks/M4-backend-routing.md`](../tasks/M4-backend-routing.md)
 
 | Task | Description | Phase |
 |---|---|---|
 | T-17 | Implement `app/routing/graph.py` — OSMnx road graph loading and in-memory caching | 2 |
 | T-18 | Implement `app/routing/astar.py` — A\* with edge cost `α × risk + (1−α) × travel_time` | 2 |
 | T-19 | Implement `POST /v1/route/safe` — routing endpoint with vs-fastest comparison | 2 |
-| T-22 | Write unit tests for feature engineering, model inference, and routing (≥ 70 % coverage) | 2 |
-| T-23 | Write integration tests for all API endpoints using pytest + httpx | 2 |
 | T-36 | Write `Dockerfile` and `docker-compose.yml` (API + PostgreSQL services) | 4 |
 | T-37 | Write `.env.example` with all required environment variables documented | 4 |
-| T-38 | End-to-end demo test: map click → risk score → SHAP panel → route displayed | 4 |
-| T-39 | Performance check: confirm risk scoring ≤ 500 ms, routing ≤ 2 s under normal load | 4 |
 
-**Deliverables:** `app/routing/graph.py`, `app/routing/astar.py`, `app/routers/route.py`, `tests/`, `Dockerfile`, `docker-compose.yml`, `.env.example`
+**Deliverables:** `app/routing/graph.py`, `app/routing/astar.py`, `app/routers/route.py`, `Dockerfile`, `docker-compose.yml`, `.env.example`
 
 ---
 
-### 12.7 M5 — Frontend Engineer
+### 12.7 M5 — QA Engineer & Technical Writer
 
-**Responsibility:** Build the Leaflet.js interactive map. Consumes all three API endpoints (risk heatmap, route, explain). Owns final documentation.
+**Responsibility:** Ensure correctness and performance of the full system through unit tests, integration tests, end-to-end validation, and the final README.
+
+📄 Full task details: [`tasks/M5-testing-docs.md`](../tasks/M5-testing-docs.md)
 
 | Task | Description | Phase |
 |---|---|---|
-| T-25 | Set up Leaflet.js single-page app (`frontend/index.html`, `frontend/app.js`) | 3 |
-| T-26 | Render OpenStreetMap base tile layer | 3 |
-| T-27 | Implement risk heatmap GeoJSON overlay — colour scale: green → yellow → orange → red | 3 |
-| T-28 | Implement SHAP panel — show top factors for a clicked road segment | 3 |
-| T-29 | Implement route input form (origin/destination text boxes; α slider 0–1) | 3 |
-| T-30 | Render safe route polyline on map with per-segment risk colour coding | 3 |
-| T-31 | Display route summary card (distance, duration, risk score, vs-fastest comparison) | 3 |
-| T-32 | Serve frontend as FastAPI static files at `/map` | 3 |
+| T-22 | Write unit tests for feature engineering, model inference, and routing (≥ 70 % coverage) | 2 |
+| T-23 | Write integration tests for all API endpoints (pytest + httpx) | 2 |
+| T-38 | End-to-end demo validation: API call → risk score → SHAP output → routed response | 4 |
+| T-39 | Performance check: confirm risk scoring ≤ 500 ms, routing ≤ 2 s | 4 |
 | T-40 | Update `README.md` with final setup instructions and model evaluation results | 4 |
 
-**Deliverables:** `frontend/index.html`, `frontend/app.js`, `frontend/style.css`, updated `README.md`
+**Deliverables:** `tests/unit/`, `tests/integration/`, `tests/e2e/`, `reports/performance.md`, updated `README.md`
 
 ---
 
@@ -588,20 +585,22 @@ Tasks are listed in execution order. Each task is labelled with its owning membe
 - [ ] **T-19** `[M4]` Implement `POST /v1/route/safe` endpoint
 - [ ] **T-20** `[M3]` Implement `GET /v1/explain/segment` endpoint (full SHAP output)
 - [ ] **T-21** `[M3]` Add `GET /health` endpoint
-- [ ] **T-22** `[M4]` Write unit tests for feature engineering, inference, and routing (≥ 70 % coverage)
-- [ ] **T-23** `[M4]` Write integration tests for all API endpoints (pytest + httpx)
+- [ ] **T-22** `[M5]` Write unit tests for feature engineering, inference, and routing (≥ 70 % coverage)
+- [ ] **T-23** `[M5]` Write integration tests for all API endpoints (pytest + httpx)
 - [ ] **T-24** `[M3]` Validate Swagger UI at `/docs`
 
-#### Phase 3 — Frontend
+#### Phase 3 — Frontend *(maintained separately by project lead)*
 
-- [ ] **T-25** `[M5]` Set up Leaflet.js single-page app (`frontend/index.html`, `frontend/app.js`)
-- [ ] **T-26** `[M5]` Render OSM base tile layer
-- [ ] **T-27** `[M5]` Implement risk heatmap overlay with colour scale
-- [ ] **T-28** `[M5]` Implement SHAP panel for clicked road segment
-- [ ] **T-29** `[M5]` Implement route input form (origin, destination, α slider)
-- [ ] **T-30** `[M5]` Render safe route polyline with per-segment risk colouring
-- [ ] **T-31** `[M5]` Display route summary card (distance, time, risk, vs-fastest)
-- [ ] **T-32** `[M5]` Serve frontend as FastAPI static files at `/map`
+> The following tasks are **not assigned to any team member**. The Leaflet.js frontend is developed independently and integrated via FastAPI's static file handler. See `frontend/` directory and [Section 8](#8-frontend-requirements) for specification.
+
+- T-25 Set up Leaflet.js single-page app
+- T-26 Render OSM base tile layer
+- T-27 Implement risk heatmap overlay with colour scale
+- T-28 Implement SHAP panel for clicked road segment
+- T-29 Implement route input form (origin, destination, α slider)
+- T-30 Render safe route polyline with per-segment risk colouring
+- T-31 Display route summary card (distance, time, risk, vs-fastest)
+- T-32 Serve frontend as FastAPI static files at `/map`
 
 #### Phase 4 — Integration & Polish
 
@@ -610,10 +609,11 @@ Tasks are listed in execution order. Each task is labelled with its owning membe
 - [ ] **T-35** `[M1]` Write `scripts/seed_data.py` — populate PostgreSQL with sample data
 - [ ] **T-36** `[M4]` Write `Dockerfile` and `docker-compose.yml`
 - [ ] **T-37** `[M4]` Write `.env.example` with all required variables documented
-- [ ] **T-38** `[M4]` End-to-end demo test: map click → SHAP panel → route displayed
-- [ ] **T-39** `[M4]` Performance check: risk scoring ≤ 500 ms, routing ≤ 2 s
+- [ ] **T-38** `[M5]` End-to-end demo validation: API call → risk score → SHAP output → routed response
+- [ ] **T-39** `[M5]` Performance check: risk scoring ≤ 500 ms, routing ≤ 2 s
 - [ ] **T-40** `[M5]` Update `README.md` with final setup instructions and evaluation results
 - [ ] **T-41** `[M2]` Prepare research report / slides with model evaluation and SHAP analysis
+
 
 ---
 
@@ -643,3 +643,4 @@ Tasks are listed in execution order. Each task is labelled with its owning membe
 | 1.0.0 | 2026-04-13 | Karri Chanikya Sri Hari Narayana Dattu | Initial draft |
 | 2.0.0 | 2026-04-13 | Karri Chanikya Sri Hari Narayana Dattu | Simplified to research prototype: replaced Kafka/Faust/GNN/Redis with XGBoost/FastAPI/PostgreSQL; added Mermaid flow diagrams; added full task breakdown |
 | 2.1.0 | 2026-04-13 | Karri Chanikya Sri Hari Narayana Dattu | Added 5-member task assignment: M1 Data Engineer, M2 ML Engineer, M3 Risk API, M4 Routing & DevOps, M5 Frontend |
+| 2.2.0 | 2026-04-13 | Karri Chanikya Sri Hari Narayana Dattu | Moved frontend to project-lead scope (not part of assessed tasks); redistributed 33 tasks across 5 members (M5 becomes QA & Docs); created individual task files in `tasks/` folder |
