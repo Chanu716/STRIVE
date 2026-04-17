@@ -188,7 +188,7 @@ Update the existing `README.md` to reflect the final state of the project. Secti
 2. **Evaluation Results** — copy final AUROC, AUPRC, F1, ECE values from `reports/evaluation.md` (provided by M2).
 3. **API Examples** — `curl` one-liners for each endpoint.
 4. **Performance** — p50 / p95 latency table from `reports/performance.md`.
-5. **Frontend** — note that a Leaflet.js interactive map frontend is available at `/map` after startup (maintained separately; see the `frontend/` directory).
+5. **Frontend** — note that a React + mapcn.dev interactive map frontend is available at `/map` after startup (maintained separately; see the `frontend/` directory).
 
 ---
 

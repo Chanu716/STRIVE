@@ -13,7 +13,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green.svg)](https://fastapi.tiangolo.com/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4-orange.svg)](https://scikit-learn.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
-[![Leaflet](https://img.shields.io/badge/Leaflet-1.9-green.svg)](https://leafletjs.com/)
+[![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
+[![mapcn.dev](https://img.shields.io/badge/mapcn.dev-Maps-0ea5e9.svg)](https://mapcn.dev/)
 [![Docker](https://img.shields.io/badge/Docker-24-blue.svg)](https://www.docker.com/)
 
 </div>
@@ -62,18 +63,18 @@ Traditional navigation prioritises speed and distance. STRIVE prioritises **safe
 - 🧠 **Gradient-boosted ML model** — XGBoost trained on historical accident records + engineered features
 - ☁️ **Live weather integration** — OpenWeatherMap free-tier API (rain, visibility, temperature, wind)
 - 🔍 **Explainable AI** — SHAP values and natural-language summaries for every prediction
-- 🗺️ **Interactive map** — Leaflet.js frontend with colour-coded risk heatmap and route overlay
+- 🗺️ **Interactive map** — React frontend powered by mapcn.dev with colour-coded risk heatmap and route overlay
 - 📦 **Single-command setup** — Docker Compose brings up the full stack in one step
 
 ---
 
 ## 🏗️ System Architecture
 
-STRIVE uses a minimal three-tier architecture: a Leaflet.js frontend, a single FastAPI backend, and a PostgreSQL database. There is no message broker, no caching cluster, and no separate microservices.
+STRIVE uses a minimal three-tier architecture: a React frontend using mapcn.dev, a single FastAPI backend, and a PostgreSQL database. There is no message broker, no caching cluster, and no separate microservices.
 
 ```mermaid
 flowchart TD
-    A["🌐 Browser\nLeaflet.js Map"] -->|HTTP REST| B["⚙️ FastAPI Backend\nlocalhost:8000"]
+    A["🌐 Browser\nReact + mapcn.dev Map"] -->|HTTP REST| B["⚙️ FastAPI Backend\nlocalhost:8000"]
     B --> C["🤖 ML Inference\nXGBoost + SHAP"]
     B --> D["🗺️ Safety Routing\nNetworkX A*"]
     B --> E[("🗄️ PostgreSQL\nAccident History")]
@@ -89,7 +90,7 @@ flowchart TD
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Frontend** | Leaflet.js + vanilla JS | Interactive risk heatmap and route display |
+| **Frontend** | React + mapcn.dev | Interactive risk heatmap and route display |
 | **Backend API** | FastAPI (Python) | REST endpoints, ML inference, routing |
 | **ML Model** | XGBoost + scikit-learn | Accident risk classification |
 | **Explainability** | SHAP | Per-feature risk attribution |
@@ -377,8 +378,8 @@ STRIVE/
 │   └── db/
 │       └── models.py      # SQLAlchemy ORM models
 ├── frontend/
-│   ├── index.html         # Leaflet.js map
-│   └── app.js             # API calls, map rendering
+│   ├── src/               # React app source
+│   └── package.json       # React dependencies and scripts
 ├── scripts/
 │   ├── train_model.py     # Training pipeline
 │   ├── download_data.py   # NHTSA FARS + OSM data fetch
@@ -423,7 +424,7 @@ Evaluated on a held-out chronological test split:
 |---|---|
 | **Phase 1** | Data collection, feature engineering, model training |
 | **Phase 2** | FastAPI backend with risk scoring and routing endpoints |
-| **Phase 3** | Leaflet.js frontend with heatmap and route visualisation |
+| **Phase 3** | React + mapcn.dev frontend with heatmap and route visualisation |
 | **Phase 4** | Integration, evaluation, demo, and documentation |
 | **Future** | Pedestrian/cyclist modes, real-time incident feed, mobile app |
 
