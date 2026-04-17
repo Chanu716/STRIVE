@@ -30,7 +30,7 @@
 
 STRIVE (Spatio-Temporal Risk Intelligence and Vehicular Safety Engine) is a research prototype that predicts road-segment accident risk in real time using weather, time-of-day, and road attributes. It provides explainable AI insights through SHAP factor attributions and supports safety-aware route recommendations via a tunable cost function.
 
-The system is designed for a **small team** (3–5 students) working in a **university research context**. It uses standard, well-documented technologies: a Python FastAPI backend, an XGBoost ML model, a PostgreSQL database, and a Leaflet.js map frontend. There are no distributed systems, message brokers, or proprietary infrastructure requirements.
+The system is designed for a **small team** (3–5 students) working in a **university research context**. It uses standard, well-documented technologies: a Python FastAPI backend, an XGBoost ML model, a PostgreSQL database, and a React + mapcn.dev map frontend. There are no distributed systems, message brokers, or proprietary infrastructure requirements.
 
 **Core value:**
 1. **Accuracy** — XGBoost model trained on historical crash data, capturing spatial, temporal, and environmental risk factors.
@@ -70,7 +70,7 @@ Open datasets (NHTSA FARS, OpenStreetMap) and free weather APIs (OpenWeatherMap)
 | G-02 | Explain every risk score with SHAP feature attributions and a plain-English summary |
 | G-03 | Return a safety-optimised route between two coordinates using A\* with risk-weighted edges |
 | G-04 | Achieve AUROC ≥ 0.82 on the held-out test set |
-| G-05 | Display a risk heatmap and route overlay on an interactive Leaflet.js map |
+| G-05 | Display a risk heatmap and route overlay on an interactive React + mapcn.dev map |
 | G-06 | Set up the full stack with a single `docker compose up` command |
 | G-07 | Expose results via a documented REST API with OpenAPI/Swagger UI |
 
@@ -94,13 +94,13 @@ Open datasets (NHTSA FARS, OpenStreetMap) and free weather APIs (OpenWeatherMap)
 
 STRIVE is a three-tier web application:
 
-- **Frontend** — a Leaflet.js single-page app served by FastAPI's static file handler
+- **Frontend** — a React single-page app using mapcn.dev, served by FastAPI's static file handler
 - **Backend** — a single FastAPI process handling ML inference, routing, and database access
 - **Database** — a single PostgreSQL instance storing historical accident data and road-segment metadata
 
 ```mermaid
 flowchart TD
-    A["🌐 Browser\nLeaflet.js Map"] -->|HTTP REST| B["⚙️ FastAPI Backend\nlocalhost:8000"]
+    A["🌐 Browser\nReact + mapcn.dev Map"] -->|HTTP REST| B["⚙️ FastAPI Backend\nlocalhost:8000"]
     B --> C["🤖 ML Inference\nXGBoost + SHAP"]
     B --> D["🗺️ Safety Routing\nNetworkX A*"]
     B --> E[("🗄️ PostgreSQL\nAccident History\nRoad Segments")]
@@ -116,7 +116,7 @@ flowchart TD
 
 | Component | Technology | Responsibility |
 |---|---|---|
-| **Map Frontend** | Leaflet.js + vanilla JS | Render risk heatmap, accept route requests, display SHAP explanations |
+| **Map Frontend** | React + mapcn.dev | Render risk heatmap, accept route requests, display SHAP explanations |
 | **REST API** | FastAPI (Python) | Route HTTP requests; orchestrate inference, routing, and DB access |
 | **ML Model** | XGBoost + scikit-learn | Predict accident probability from feature vector |
 | **Explainer** | SHAP | Compute per-feature contributions for each prediction |
@@ -336,7 +336,7 @@ Risk levels:
 
 | Requirement | Detail |
 |---|---|
-| Technology | Leaflet.js + vanilla JavaScript (no framework required) |
+| Technology | React + mapcn.dev |
 | Map tiles | OpenStreetMap tile layer (free) |
 | Risk heatmap | GeoJSON overlay with colour scale: green → yellow → red |
 | Route display | Polyline overlay with per-segment risk colour coding |
@@ -426,7 +426,7 @@ All of the following should be met for a successful research demonstration:
 
 ## 12. Development Task Breakdown
 
-> **Note on Frontend:** The Leaflet.js interactive map frontend (T-25 to T-32) is maintained **separately by the project lead** and is not part of any team member's assessed tasks. See [Section 8](#8-frontend-requirements) for the frontend specification. Individual task files are located in the [`tasks/`](../tasks/) directory.
+> **Note on Frontend:** The React + mapcn.dev interactive map frontend (T-25 to T-32) is maintained **separately by the project lead** and is not part of any team member's assessed tasks. See [Section 8](#8-frontend-requirements) for the frontend specification. Individual task files are located in the [`tasks/`](../tasks/) directory.
 
 The 33 backend and data-science tasks are divided across **5 team members** by role. Each member owns a coherent domain so that work is parallel and dependencies are clear.
 
@@ -591,9 +591,9 @@ Tasks are listed in execution order. Each task is labelled with its owning membe
 
 #### Phase 3 — Frontend *(maintained separately by project lead)*
 
-> The following tasks are **not assigned to any team member**. The Leaflet.js frontend is developed independently and integrated via FastAPI's static file handler. See `frontend/` directory and [Section 8](#8-frontend-requirements) for specification.
+> The following tasks are **not assigned to any team member**. The React + mapcn.dev frontend is developed independently and integrated via FastAPI's static file handler. See `frontend/` directory and [Section 8](#8-frontend-requirements) for specification.
 
-- T-25 Set up Leaflet.js single-page app
+- T-25 Set up React + mapcn.dev single-page app
 - T-26 Render OSM base tile layer
 - T-27 Implement risk heatmap overlay with colour scale
 - T-28 Implement SHAP panel for clicked road segment
