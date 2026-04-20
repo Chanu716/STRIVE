@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 T-09: Train final model with best params, evaluate on test set.
 
@@ -18,7 +18,7 @@ import pandas as pd
 import xgboost as xgb
 import mlflow
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg")   # must be set before pyplot import
 import matplotlib.pyplot as plt
 
 from sklearn.metrics import (
@@ -81,10 +81,10 @@ with mlflow.start_run(run_name="final_model"):
     bin_counts_aligned = bin_counts[:n_bins_actual]
     ece = float(np.sum(np.abs(fraction_pos - mean_pred) * bin_counts_aligned) / len(y_test))
 
-    print(f"\n  AUROC     : {auroc:.4f}  (target ≥ 0.82)")
-    print(f"  AUPRC     : {auprc:.4f}  (target ≥ 0.35)")
-    print(f"  F1        : {opt_f1:.4f}  (target ≥ 0.55)  @ threshold {opt_threshold:.3f}")
-    print(f"  ECE       : {ece:.4f}  (target ≤ 0.08)")
+    print(f"\n  AUROC     : {auroc:.4f}  (target >= 0.82)")
+    print(f"  AUPRC     : {auprc:.4f}  (target >= 0.35)")
+    print(f"  F1        : {opt_f1:.4f}  (target >= 0.55)  @ threshold {opt_threshold:.3f}")
+    print(f"  ECE       : {ece:.4f}  (target <= 0.08)")
 
     mlflow.log_metrics({"test_auroc": auroc, "test_auprc": auprc,
                         "test_f1": opt_f1, "test_ece": ece,
@@ -133,7 +133,7 @@ with open("models/model.pkl", "wb") as f:
     pickle.dump(model, f)
 
 # ── Write evaluation.md ───────────────────────────────────────────────────────
-status = lambda val, tgt, op: "✅" if (val >= tgt if op == ">=" else val <= tgt) else "❌"
+status = lambda val, tgt, op: "✅" if (val >= tgt if op == ">=" else val <= tgt) else "[FAIL]"
 
 report = f"""# STRIVE — Model Evaluation Report
 
@@ -143,10 +143,10 @@ report = f"""# STRIVE — Model Evaluation Report
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| AUROC | {auroc:.4f} | ≥ 0.82 | {status(auroc, 0.82, ">=")} |
-| AUPRC | {auprc:.4f} | ≥ 0.35 | {status(auprc, 0.35, ">=")} |
-| F1 @ optimal threshold | {opt_f1:.4f} | ≥ 0.55 | {status(opt_f1, 0.55, ">=")} |
-| ECE | {ece:.4f} | ≤ 0.08 | {status(ece, 0.08, "<=")} |
+| AUROC | {auroc:.4f} | >= 0.82 | {status(auroc, 0.82, ">=")} |
+| AUPRC | {auprc:.4f} | >= 0.35 | {status(auprc, 0.35, ">=")} |
+| F1 @ optimal threshold | {opt_f1:.4f} | >= 0.55 | {status(opt_f1, 0.55, ">=")} |
+| ECE | {ece:.4f} | <= 0.08 | {status(ece, 0.08, "<=")} |
 
 **Optimal classification threshold:** {opt_threshold:.4f}
 
@@ -174,6 +174,6 @@ report = f"""# STRIVE — Model Evaluation Report
 with open("reports/evaluation.md", "w", encoding="utf-8") as f:
     f.write(report)
 
-print("\n✓ reports/evaluation.md written")
-print("✓ models/model.pkl saved")
-print("✓ Plots saved to reports/")
+print("\n[OK] reports/evaluation.md written")
+print("[OK] models/model.pkl saved")
+print("[OK] Plots saved to reports/")

@@ -9,11 +9,53 @@ Output: data/raw/road_network.graphml (NetworkX graph in GraphML format)
 """
 
 import os
+import re
 import logging
 from pathlib import Path
 from typing import Optional
 
 import osmnx as ox
+
+
+def parse_maxspeed(val, default: float = 50.0) -> float:
+    """
+    Parse an OSM maxspeed string into km/h.
+
+    Handles forms like:
+      "50"        → 50.0 km/h
+      "25 mph"    → 40.2 km/h
+      "30 mph"    → 48.3 km/h
+      "motorway"  → default (130 km/h)
+      None        → default (50 km/h)
+
+    Special OSM text tokens mapped to sensible defaults:
+      "motorway"   → 130
+      "national"   → 100
+      "rural"      → 80
+      "urban"      → 50
+      "living_street" → 20
+      "walk"       → 10
+    """
+    TOKENS = {
+        "motorway": 130.0,
+        "national": 100.0,
+        "rural":     80.0,
+        "urban":     50.0,
+        "living_street": 20.0,
+        "walk":      10.0,
+    }
+    if val is None:
+        return default
+    v = str(val).strip().lower()
+    if v in TOKENS:
+        return TOKENS[v]
+    m = re.match(r"^(\d+(?:\.\d+)?)\s*(mph)?$", v)
+    if m:
+        speed = float(m.group(1))
+        if m.group(2) == "mph":
+            return round(speed * 1.60934, 1)
+        return speed
+    return default
 
 # Configure logging
 logging.basicConfig(
@@ -46,17 +88,25 @@ def download_road_network(place: str, network_type: str = "drive", output_dir: s
         logger.info(f"✓ Downloaded graph: {len(G.nodes)} nodes, {len(G.edges)} edges")
 
         # Add useful metadata to edges
-        logger.info("Computing edge attributes...")
+        logger.info("Computing edge attributes (parsing real maxspeed values)...")
+        speed_sources = {"maxspeed_parsed": 0, "default_fallback": 0}
         for u, v, k, data in G.edges(keys=True, data=True):
-            # Ensure speed_kph exists (default to 50 km/h if missing)
-            if 'speed_kph' not in data:
-                data['speed_kph'] = 50
+            # Always parse real maxspeed string first
+            raw_maxspeed = data.get('maxspeed', None)
+            parsed_speed = parse_maxspeed(raw_maxspeed)
+            if raw_maxspeed is not None:
+                speed_sources["maxspeed_parsed"] += 1
+            else:
+                speed_sources["default_fallback"] += 1
+            data['speed_kph'] = parsed_speed
 
             # Compute travel time in seconds
             if 'length' in data:
                 length_km = data['length'] / 1000
-                speed = data.get('speed_kph', 50)
-                data['travel_time_sec'] = (length_km / speed) * 3600 if speed > 0 else 3600
+                data['travel_time_sec'] = (length_km / parsed_speed) * 3600 if parsed_speed > 0 else 3600
+
+        logger.info(f"  Speed sources: {speed_sources['maxspeed_parsed']} parsed from maxspeed, "
+                    f"{speed_sources['default_fallback']} defaulted to 50 km/h")
 
         # Save to GraphML
         output_file = os.path.join(output_dir, "road_network.graphml")

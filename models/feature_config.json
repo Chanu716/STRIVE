@@ -14,8 +14,8 @@
     "historical_accident_rate"
   ],
   "n_features": 12,
-  "threshold": 0.999870777130127,
-  "xgboost_version": "3.2.0",
+  "threshold": 0.34795016050338745,
+  "xgboost_version": "2.0.3",
   "risk_levels": {
     "LOW": [
       0,

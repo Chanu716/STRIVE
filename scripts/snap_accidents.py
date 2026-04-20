@@ -103,26 +103,45 @@ def snap_accidents_to_edges(
             
         for idx, row in accidents.iterrows():
             pos = int(idx) if isinstance(idx, int) and idx < len(edges) else accidents.index.get_loc(idx)
-            
+
             u, v, k = edges[pos][:3]
             dist_m = float(dists[pos])
-            
+
             if dist_m <= threshold_m:
                 lat, lon = float(row['LATITUDE']), float(row['LONGITUDE'])
+
+                # ── Real FARS identifier ────────────────────────────────────
+                # Prefer the official ST_CASE field; fall back to row index
+                accident_id = str(row.get('ST_CASE', row.get('FARS_ID', f"ACC_{idx}")))
+
+                # ── Real FARS weather / road columns ────────────────────────
+                # WEATHER: 1=Clear 2=Rain 3=Sleet 4=Snow 5=Fog 6=Crosswind
+                #          10=Cloudy 12=Frz-Rain  98/99=Unknown
+                weather_code = int(row['WEATHER']) if 'WEATHER' in row and not pd.isna(row['WEATHER']) else 1
+                # LGT_COND: 1=Daylight 2=Dark-Lit 3=Dark-Unlit 4=Dawn 5=Dusk
+                lgt_cond = int(row['LGT_COND']) if 'LGT_COND' in row and not pd.isna(row['LGT_COND']) else 1
+                # FUNC_SYS: 1=Interstate 2=Freeway 3=Principal Arterial
+                #           4=Minor Arterial 5=Collector 6=Minor Collector 7=Local
+                func_sys = int(row['FUNC_SYS']) if 'FUNC_SYS' in row and not pd.isna(row['FUNC_SYS']) else 5
+
                 snapped_records.append({
-                    'accident_id': str(row.get('FARS_ID', f"ACC_{idx}")),
-                    'osmid': f"{u}_{v}",
-                    'latitude': lat,
-                    'longitude': lon,
-                    'snap_distance_m': dist_m,
-                    'year': int(row.get('YEAR', 0)),
-                    'month': int(row.get('MONTH', 0)),
-                    'day': int(row.get('DAY', 0)),
-                    'hour': int(row.get('HOUR', 0)),
-                    'minute': int(row.get('MINUTE', 0)),
-                    'severity': str(row.get('SEVERITY', '')),
-                    'fatalities': int(row.get('FATALITIES', 0)),
-                    'injuries': int(row.get('INJURIES', 0)),
+                    'accident_id':      accident_id,
+                    'osmid':            f"{u}_{v}",
+                    'latitude':         lat,
+                    'longitude':        lon,
+                    'snap_distance_m':  dist_m,
+                    'year':             int(row.get('YEAR', 0)),
+                    'month':            int(row.get('MONTH', 0)),
+                    'day':              int(row.get('DAY', 0)),
+                    'hour':             int(row.get('HOUR', 0)),
+                    'minute':           int(row.get('MINUTE', 0)),
+                    # Real FARS weather / road attributes
+                    'weather_code':     weather_code,
+                    'lgt_cond':         lgt_cond,
+                    'func_sys':         func_sys,
+                    # Severity / casualties
+                    'fatalities':       int(row['FATALS'])  if 'FATALS'  in row and not pd.isna(row['FATALS'])  else 0,
+                    'drunk_drivers':    int(row['DRUNK_DR']) if 'DRUNK_DR' in row and not pd.isna(row['DRUNK_DR']) else 0,
                 })
     except Exception as e:
         logger.error(f"Vectorized snapping failed: {e}")

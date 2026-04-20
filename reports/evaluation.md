@@ -6,24 +6,24 @@
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| AUROC | 1.0000 | ≥ 0.82 | ✅ |
-| AUPRC | 1.0000 | ≥ 0.35 | ✅ |
-| F1 @ optimal threshold | 1.0000 | ≥ 0.55 | ✅ |
-| ECE | 0.0000 | ≤ 0.08 | ✅ |
+| AUROC | 0.6942 | >= 0.82 | [FAIL] |
+| AUPRC | 0.7233 | >= 0.35 | ✅ |
+| F1 @ optimal threshold | 0.6953 | >= 0.55 | ✅ |
+| ECE | 0.0058 | <= 0.08 | ✅ |
 
-**Optimal classification threshold:** 0.9999
+**Optimal classification threshold:** 0.3480
 
 ### Best Hyperparameters (Optuna, 50 trials)
 
 ```json
 {
-  "max_depth": 5,
-  "learning_rate": 0.22648248189516848,
-  "n_estimators": 466,
-  "subsample": 0.7993292420985183,
-  "colsample_bytree": 0.5780093202212182,
-  "min_child_weight": 2,
-  "scale_pos_weight": 0.9905641928229197
+  "max_depth": 3,
+  "learning_rate": 0.15407468620744033,
+  "n_estimators": 455,
+  "subsample": 0.9675975947587264,
+  "colsample_bytree": 0.5529539197128122,
+  "min_child_weight": 7,
+  "scale_pos_weight": 0.9957844170486018
 }
 ```
 
@@ -31,8 +31,8 @@
 
 | Split | Samples | Positive rate |
 |-------|---------|---------------|
-| Train + Val | 197,758 | 50.0% |
-| Test | 34,900 | 50.2% |
+| Train + Val | 197,758 | 49.8% |
+| Test | 34,900 | 50.9% |
 
 ### Figures
 

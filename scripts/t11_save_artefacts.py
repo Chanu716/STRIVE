@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 T-11: Save final model artefact and feature config.
 
@@ -57,8 +57,8 @@ os.makedirs("models", exist_ok=True)
 with open("models/feature_config.json", "w") as f:
     json.dump(config, f, indent=2)
 
-print("\n✓ models/feature_config.json saved")
-print("✓ models/model.pkl already present")
+print("\n[OK] models/feature_config.json saved")
+print("[OK] models/model.pkl already present")
 
 # ── Verify both files exist ───────────────────────────────────────────────────
 for path in ["models/model.pkl", "models/feature_config.json"]:

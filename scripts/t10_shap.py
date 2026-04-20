@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 T-10: SHAP Validation
 
@@ -66,7 +66,7 @@ shap.summary_plot(sv, X_df, feature_names=FEATURE_NAMES, plot_type="bar", show=F
 plt.tight_layout()
 plt.savefig("reports/shap_summary.png", dpi=120, bbox_inches="tight")
 plt.close()
-print("\n✓ reports/shap_summary.png saved")
+print("\n[OK] reports/shap_summary.png saved")
 
 # ── SHAP beeswarm plot ────────────────────────────────────────────────────────
 plt.figure(figsize=(9, 6))
@@ -74,7 +74,7 @@ shap.summary_plot(sv, X_df, feature_names=FEATURE_NAMES, show=False)
 plt.tight_layout()
 plt.savefig("reports/shap_beeswarm.png", dpi=120, bbox_inches="tight")
 plt.close()
-print("✓ reports/shap_beeswarm.png saved")
+print("[OK] reports/shap_beeswarm.png saved")
 
 # ── Domain validation ─────────────────────────────────────────────────────────
 top5 = feature_importance.head(5).index.tolist()
@@ -152,4 +152,4 @@ The SHAP analysis confirms that the model relies on domain-relevant features:
 with open("reports/shap_analysis.md", "w", encoding="utf-8") as f:
     f.write(findings)
 
-print("\n✓ reports/shap_analysis.md written")
+print("\n[OK] reports/shap_analysis.md written")

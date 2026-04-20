@@ -4,17 +4,17 @@
 
 | Rank | Feature | Mean |SHAP| |
 |------|---------|-------------|
-| 1 | `wind_speed_ms` | 3.9426 |
-| 2 | `precipitation_mm` | 3.0261 |
-| 3 | `rain_on_congestion` | 2.2683 |
-| 4 | `visibility_km` | 0.8545 |
-| 5 | `temperature_c` | 0.7096 |
-| 6 | `hour_of_day` | 0.3897 |
-| 7 | `month` | 0.3092 |
-| 8 | `night_indicator` | 0.2460 |
-| 9 | `day_of_week` | 0.1466 |
-| 10 | `road_class` | 0.1297 |
-| 11 | `speed_limit_kmh` | 0.0000 |
+| 1 | `hour_of_day` | 0.9258 |
+| 2 | `night_indicator` | 0.9245 |
+| 3 | `month` | 0.1616 |
+| 4 | `day_of_week` | 0.1060 |
+| 5 | `speed_limit_kmh` | 0.0912 |
+| 6 | `rain_on_congestion` | 0.0764 |
+| 7 | `road_class` | 0.0569 |
+| 8 | `temperature_c` | 0.0305 |
+| 9 | `precipitation_mm` | 0.0295 |
+| 10 | `visibility_km` | 0.0202 |
+| 11 | `wind_speed_ms` | 0.0090 |
 | 12 | `historical_accident_rate` | 0.0000 |
 
 ## Domain Validation
@@ -23,7 +23,7 @@
 |-------|--------|
 | `precipitation_mm` in top-5 for wet-night cases | PASS |
 | `historical_accident_rate` in top-5 | FAIL |
-| `night_indicator` has positive SHAP for night-time | PASS |
+| `night_indicator` has positive SHAP for night-time | FAIL |
 
 ## Figures
 

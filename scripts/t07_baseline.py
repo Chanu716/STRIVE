@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 T-07: Train XGBoost Baseline Model
 
@@ -69,4 +69,4 @@ os.makedirs("models", exist_ok=True)
 with open("models/baseline.pkl", "wb") as f:
     pickle.dump(model, f)
 
-print("\n✓ Baseline model saved to models/baseline.pkl")
+print("\n[OK] Baseline model saved to models/baseline.pkl")

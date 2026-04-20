@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 T-08: Optuna Hyperparameter Search (50 trials, 3-fold time-series CV)
 
@@ -103,4 +103,4 @@ os.makedirs("models", exist_ok=True)
 with open("models/best_params.json", "w") as f:
     json.dump(best, f, indent=2)
 
-print("\n✓ Best params saved to models/best_params.json")
+print("\n[OK] Best params saved to models/best_params.json")
