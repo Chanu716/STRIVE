@@ -1,0 +1,39 @@
+{
+  "feature_names": [
+    "hour_of_day",
+    "day_of_week",
+    "month",
+    "night_indicator",
+    "road_class",
+    "speed_limit_kmh",
+    "precipitation_mm",
+    "visibility_km",
+    "wind_speed_ms",
+    "temperature_c",
+    "rain_on_congestion",
+    "historical_accident_rate"
+  ],
+  "n_features": 12,
+  "threshold": 0.999870777130127,
+  "xgboost_version": "3.2.0",
+  "risk_levels": {
+    "LOW": [
+      0,
+      25
+    ],
+    "MODERATE": [
+      26,
+      50
+    ],
+    "HIGH": [
+      51,
+      75
+    ],
+    "CRITICAL": [
+      76,
+      100
+    ]
+  },
+  "model_path": "models/model.pkl",
+  "notes": "risk_score = round(100 * P(incident)). Threshold used for binary classification only."
+}
