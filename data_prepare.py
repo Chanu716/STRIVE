@@ -136,6 +136,16 @@ def main():
     ]
     all_success = run_command(cmd, "T-04: Compute Historical Accident Rates") and all_success
 
+    # T-05: Build Features
+    cmd = [
+        "python", "scripts/build_features.py",
+        "--snapped", "data/processed/accidents_snapped.parquet",
+        "--rates", "data/processed/segment_rates.parquet",
+        "--network", "data/raw/road_network.graphml",
+        "--output", "data/processed/features.parquet"
+    ]
+    all_success = run_command(cmd, "T-05: Build Features Dataset") and all_success
+
     # Summary
     logger.info("\n" + "="*60)
     if all_success:
@@ -146,6 +156,7 @@ def main():
         logger.info("  data/raw/road_network.graphml (OSM road network)")
         logger.info("  data/processed/accidents_snapped.parquet (Snapped accidents)")
         logger.info("  data/processed/segment_rates.parquet (Accident rates)")
+        logger.info("  data/processed/features.parquet (Features Dataset)")
         logger.info("\nNext: M2 will use these to train the ML model")
         return 0
     else:

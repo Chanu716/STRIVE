@@ -83,44 +83,38 @@ def snap_accidents_to_edges(
     snapped_records = []
     errors = 0
 
-    for idx, row in accidents.iterrows():
-        if idx % 500 == 0 and idx > 0:
-            logger.info(f"  Processed {idx} / {len(accidents)} accidents...")
+    if len(accidents) == 0:
+        return pd.DataFrame()
 
-        try:
-            lat, lon = float(row['LATITUDE']), float(row['LONGITUDE'])
+    try:
+        # Vectorized edge snapping for major performance boost
+        lons = accidents['LONGITUDE'].values
+        lats = accidents['LATITUDE'].values
 
-            # Find nearest edge - try to handle different return formats
-            nearest_edge_result = ox.nearest_edges(
-                G,
-                X=lon,
-                Y=lat,
-                return_dist=True
-            )
-
-            # Handle different tuple lengths
-            # return_dist=True returns ((u, v, k), distance) tuple
-            if isinstance(nearest_edge_result, tuple) and len(nearest_edge_result) == 2:
-                edge_tuple, dist_m = nearest_edge_result
-                u, v, k = edge_tuple
-            elif isinstance(nearest_edge_result, tuple) and len(nearest_edge_result) == 3:
-                u, v, k = nearest_edge_result
-                dist_m = 0  # No distance returned
-            else:
-                logger.debug(f"Unexpected nearest_edges return: {nearest_edge_result}")
-                errors += 1
-                continue
-
-            # Check distance threshold (convert m to meters if needed)
-            dist_m_float = float(dist_m) if isinstance(dist_m, (int, float, np.number)) else dist_m
-
-            if dist_m_float <= threshold_m:
+        # Find nearest edges and distances for all points at once
+        results = ox.nearest_edges(G, X=lons, Y=lats, return_dist=True)
+        
+        if isinstance(results, tuple) and len(results) == 2:
+            edges, dists = results
+        else:
+            # Handle cases where return_dist might not be respected by old osmnx versions on arrays
+            edges = results
+            dists = [0.0] * len(edges)
+            
+        for idx, row in accidents.iterrows():
+            pos = int(idx) if isinstance(idx, int) and idx < len(edges) else accidents.index.get_loc(idx)
+            
+            u, v, k = edges[pos][:3]
+            dist_m = float(dists[pos])
+            
+            if dist_m <= threshold_m:
+                lat, lon = float(row['LATITUDE']), float(row['LONGITUDE'])
                 snapped_records.append({
                     'accident_id': str(row.get('FARS_ID', f"ACC_{idx}")),
                     'osmid': f"{u}_{v}",
                     'latitude': lat,
                     'longitude': lon,
-                    'snap_distance_m': dist_m_float,
+                    'snap_distance_m': dist_m,
                     'year': int(row.get('YEAR', 0)),
                     'month': int(row.get('MONTH', 0)),
                     'day': int(row.get('DAY', 0)),
@@ -130,11 +124,9 @@ def snap_accidents_to_edges(
                     'fatalities': int(row.get('FATALITIES', 0)),
                     'injuries': int(row.get('INJURIES', 0)),
                 })
-
-        except Exception as e:
-            errors += 1
-            if errors <= 5:  # Log first 5 errors only
-                logger.debug(f"Error snapping accident {idx}: {e}")
+    except Exception as e:
+        logger.error(f"Vectorized snapping failed: {e}")
+        errors += len(accidents)
 
     logger.info(f"[OK] Snapped {len(snapped_records)} accidents (within threshold)")
     logger.info(f"  Discarded: {len(accidents) - len(snapped_records)} (outside threshold or error)")
