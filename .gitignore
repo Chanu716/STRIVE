@@ -1,1 +1,13 @@
 cache/
+
+# Python/local runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3

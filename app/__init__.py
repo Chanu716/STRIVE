@@ -1,1 +1,1 @@
-# STRIVE App Package
+"""STRIVE application package."""
