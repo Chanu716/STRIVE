@@ -11,3 +11,19 @@ venv/
 *.db
 *.sqlite
 *.sqlite3
+
+# Environment and secrets
+.env
+
+# Testing and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ML artifacts
+mlruns/
+
+# Project specific
+test.json
+data/processed/
+reports/performance.md

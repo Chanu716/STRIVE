@@ -223,6 +223,11 @@ Returns the risk score for a road segment given coordinates.
 
 **Query params:** `lat`, `lon`
 
+**Example `curl`**:
+```bash
+curl "http://localhost:8000/v1/risk/segment?lat=34.05&lon=-118.24"
+```
+
 **Response**
 ```json
 {
@@ -245,11 +250,23 @@ Returns a GeoJSON FeatureCollection of road segments with risk scores for map re
 
 **Query params:** `bbox` (`min_lon,min_lat,max_lon,max_lat`)
 
+**Example `curl`**:
+```bash
+curl "http://localhost:8000/v1/risk/heatmap?bbox=34.0,-118.3,34.1,-118.2"
+```
+
 ---
 
 ### `POST /route/safe`
 
 Returns a safety-optimised route between two coordinates.
+
+**Example `curl`**:
+```bash
+curl -X POST "http://localhost:8000/v1/route/safe" \
+     -H "Content-Type: application/json" \
+     -d '{"origin": {"lat": 34.052, "lon": -118.243}, "destination": {"lat": 34.073, "lon": -118.200}, "alpha": 0.6}'
+```
 
 **Request body**
 ```json
@@ -290,6 +307,11 @@ Returns the full SHAP explanation for a road segment.
 
 **Query params:** `lat`, `lon`
 
+**Example `curl`**:
+```bash
+curl "http://localhost:8000/v1/explain/segment?lat=34.05&lon=-118.24"
+```
+
 ---
 
 ### `GET /health`
@@ -308,7 +330,7 @@ Health check — returns `200 OK` when the service is running.
 | Docker + Docker Compose | 24+ |
 | OpenWeatherMap API key | Free tier |
 
-### Quick Start (Docker Compose)
+### Quick Start
 
 ```bash
 # 1. Clone the repository
@@ -316,18 +338,22 @@ git clone https://github.com/Chanu716/STRIVE.git
 cd STRIVE
 
 # 2. Add your API key
-echo "OWM_API_KEY=your_key_here" > .env
+cp .env.example .env   # fill in OPENWEATHERMAP_API_KEY
 
-# 3. Start all services (API + database)
-docker compose up -d
+# 3. Download data and train model
+python scripts/download_data.py --city "Los Angeles, CA" --years 2021 2022
+python scripts/train_model.py --skip-tuning
 
-# 4. Load sample accident data
+# 4. Start all services
+docker compose up --build -d
+
+# 5. Load sample accident data
 python scripts/seed_data.py
 
-# API is now available at http://localhost:8000
-# Frontend map at http://localhost:8000/map
-# Swagger docs at http://localhost:8000/docs
+# API available at http://localhost:8000/docs
 ```
+
+> **Frontend Note:** A React + mapcn.dev interactive map frontend is available at `/map` after startup (maintained separately; see the `frontend/` directory).
 
 ### Local Development (no Docker)
 
@@ -401,12 +427,21 @@ STRIVE/
 
 Evaluated on a held-out chronological test split:
 
-| Metric | Target | Meaning |
-|---|---|---|
-| AUROC | ≥ 0.82 | Classifier discrimination ability |
-| AUPRC | ≥ 0.35 | Precision-recall tradeoff (imbalanced data) |
-| F1 | ≥ 0.55 | Balanced precision and recall |
-| ECE | ≤ 0.08 | Probability calibration quality |
+| Metric | Target | Actual | Meaning |
+|---|---|---|---|
+| AUROC | ≥ 0.82 | 0.6942 | Classifier discrimination ability |
+| AUPRC | ≥ 0.35 | 0.7233 | Precision-recall tradeoff (imbalanced data) |
+| F1 | ≥ 0.55 | 0.6953 | Balanced precision and recall |
+| ECE | ≤ 0.08 | 0.0058 | Probability calibration quality |
+
+### Routine Performance
+
+Latency measured over 10 consecutive API requests under normal test load.
+
+| Endpoint | p50 (ms) | p95 (ms) | Target |
+|---|---:|---:|---|
+| GET /v1/risk/segment | 2.3 | 909.0 | <= 500 ms |
+| POST /v1/route/safe | 2.0 | 2.9 | <= 2000 ms |
 
 ### Routing Quality
 

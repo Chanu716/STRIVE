@@ -21,8 +21,8 @@ from app.ml.features import FEATURE_NAMES
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 SEED  = 42
-N_TRIALS = 50
-N_FOLDS  = 3
+N_TRIALS = int(os.getenv("STRIVE_OPTUNA_TRIALS", "50"))
+N_FOLDS  = int(os.getenv("STRIVE_OPTUNA_FOLDS", "3"))
 CV_SAMPLE = 40000   # subsample for CV speed (still chronological)
 
 # ── Load train split ──────────────────────────────────────────────────────────

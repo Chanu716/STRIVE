@@ -40,7 +40,7 @@ def get_weather(lat: float, lon: float) -> dict[str, float]:
         return cached[1]
 
     api_key = os.getenv("OWM_API_KEY")
-    if not api_key:
+    if not api_key or api_key == "your_api_key_here":
         data = {
             "precipitation_mm": 0.0,
             "visibility_km": 10.0,
