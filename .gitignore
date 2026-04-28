@@ -26,4 +26,5 @@ mlruns/
 # Project specific
 test.json
 data/processed/
+data/raw/
 reports/performance.md

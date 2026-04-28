@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import itertools
 from typing import Any
 
 import networkx as nx
@@ -108,3 +109,35 @@ def safe_route(
         dest_node,
         weight=_weight_function(bounded_alpha, risk_scores, max_tt),
     )
+
+
+def alternative_paths(
+    graph: nx.MultiDiGraph,
+    origin_node: Any,
+    dest_node: Any,
+    k: int = 3,
+) -> list[list[Any]]:
+    """Return top K physically distinct paths ordered by travel time.
+
+    ``nx.shortest_simple_paths`` does not support MultiDiGraph, so we first
+    collapse parallel edges into a simple DiGraph keeping the minimum travel
+    time per (u, v) pair, run Yen's K-shortest-paths on that projection, and
+    return the resulting node sequences (which are valid in the original graph).
+    """
+    # Build a simple DiGraph projection with the minimum travel time edge.
+    simple = nx.DiGraph()
+    for u, v, data in graph.edges(data=True):
+        tt = travel_time_seconds(data)
+        if simple.has_edge(u, v):
+            if tt < simple[u][v]["weight"]:
+                simple[u][v]["weight"] = tt
+        else:
+            simple.add_edge(u, v, weight=tt)
+
+    try:
+        generator = nx.shortest_simple_paths(simple, origin_node, dest_node, weight="weight")
+        return list(itertools.islice(generator, k))
+    except (nx.NetworkXNoPath, nx.NodeNotFound, nx.NetworkXNotImplemented):
+        return []
+
+

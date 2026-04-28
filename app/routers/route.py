@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from app.ml.features import build_feature_vector
 from app.ml.inference import load_model, run_inference
 from app.routing.astar import safe_route, travel_time_seconds, travel_time_normalizer
-from app.routing.graph import get_graph, nearest_node
+from app.routing.graph import get_static_graph, nearest_node
 from app.weather import get_weather
 
 
@@ -53,15 +53,6 @@ class SafeRouteRequest(BaseModel):
     )
 
 
-class RouteSummary(BaseModel):
-    """Aggregate route metrics."""
-
-    geometry: dict[str, Any] = Field(description="Route geometry as GeoJSON LineString.")
-    distance_km: float = Field(description="Total route distance in kilometres.")
-    duration_min: float = Field(description="Estimated route duration in minutes.")
-    avg_risk_score: int = Field(description="Mean edge risk score across the route.")
-
-
 class RouteSegment(BaseModel):
     """Risk score for one traversed route segment."""
 
@@ -70,13 +61,22 @@ class RouteSegment(BaseModel):
     risk_level: str = Field(description="Bucketed risk label for the segment.")
 
 
+class RouteSummary(BaseModel):
+    """Aggregate route metrics."""
+
+    route_id: str = Field(description="Unique identifier for the route option.")
+    geometry: dict[str, Any] = Field(description="Route geometry as GeoJSON LineString.")
+    distance_km: float = Field(description="Total route distance in kilometres.")
+    duration_min: float = Field(description="Estimated route duration in minutes.")
+    avg_risk_score: int = Field(description="Mean edge risk score across the route.")
+    is_safest: bool = Field(default=False, description="Flag indicating if this is the safest option.")
+    segments: list[RouteSegment] = Field(description="Segments traversed by the route.")
+
+
 class SafeRouteResponse(BaseModel):
     """Response contract for POST /v1/route/safe."""
 
-    route: RouteSummary = Field(description="Safety-aware route metrics.")
-    fastest: RouteSummary = Field(description="Fastest-route baseline metrics.")
-    risk_reduction_pct: float = Field(description="Average risk reduction compared with the fastest route.")
-    segments: list[RouteSegment] = Field(description="Segments traversed by the safety-aware route.")
+    alternatives: list[RouteSummary] = Field(description="List of alternative routes.")
 
 
 def _risk_level(score: int) -> str:
@@ -151,14 +151,31 @@ def _score_graph_edges(
     graph: nx.MultiDiGraph,
     weather: dict[str, float],
     timestamp: datetime,
+    paths: list[list[Any]] = None,
 ) -> dict[tuple[Any, Any, Any], float]:
     risk_scores: dict[tuple[Any, Any, Any], float] = {}
     edge_refs: list[tuple[Any, Any, Any]] = []
     feature_vectors: list[np.ndarray] = []
 
-    for u, v, key, data in graph.edges(keys=True, data=True):
-        edge_refs.append((u, v, key))
-        feature_vectors.append(build_feature_vector(_edge_feature_input(u, v, data, weather, timestamp)))
+    # If paths are provided, only score edges that appear in these paths.
+    # This optimization allows for sub-second responses on large regional graphs.
+    if paths:
+        target_edges = set()
+        for path in paths:
+            if not path: continue
+            for u, v in zip(path, path[1:]):
+                if graph.has_edge(u, v):
+                    for key in graph[u][v]:
+                        target_edges.add((u, v, key))
+        
+        for u, v, key in target_edges:
+            data = graph.get_edge_data(u, v, key)
+            edge_refs.append((u, v, key))
+            feature_vectors.append(build_feature_vector(_edge_feature_input(u, v, data, weather, timestamp)))
+    else:
+        for u, v, key, data in graph.edges(keys=True, data=True):
+            edge_refs.append((u, v, key))
+            feature_vectors.append(build_feature_vector(_edge_feature_input(u, v, data, weather, timestamp)))
 
     if not feature_vectors:
         return risk_scores
@@ -252,8 +269,9 @@ def _route_summary(
     graph: nx.MultiDiGraph,
     path: list[Any],
     risk_scores: dict[tuple[Any, Any, Any], float],
-    alpha: float,
-) -> tuple[RouteSummary, list[RouteSegment]]:
+    alpha: float = 1.0,
+    route_id: str = "route_0",
+) -> RouteSummary:
     edges = _route_edges(graph, path, risk_scores, alpha)
     distance_m = sum(_as_float(data.get("length"), 0.0) for _, _, _, data in edges)
     duration_s = sum(travel_time_seconds(data) for _, _, _, data in edges)
@@ -266,14 +284,13 @@ def _route_summary(
         RouteSegment(segment_id=_edge_id(u, v), risk_score=score, risk_level=_risk_level(score))
         for (u, v, _, _), score in zip(edges, segment_scores)
     ]
-    return (
-        RouteSummary(
-            geometry=_route_geometry(graph, edges),
-            distance_km=round(distance_m / 1000.0, 3),
-            duration_min=round(duration_s / 60.0, 1),
-            avg_risk_score=avg_risk,
-        ),
-        segments,
+    return RouteSummary(
+        route_id=route_id,
+        geometry=_route_geometry(graph, edges),
+        distance_km=round(distance_m / 1000.0, 3),
+        duration_min=round(duration_s / 60.0, 1),
+        avg_risk_score=avg_risk,
+        segments=segments,
     )
 
 
@@ -283,37 +300,53 @@ def _route_summary(
     summary="Compute A Safety-Aware Route",
     description=(
         "Snap origin and destination coordinates to the road graph, score graph edges "
-        "with the M3 inference layer, run risk-weighted A*, and compare against the fastest route."
+        "with the M3 inference layer, run K-shortest distinct physical paths, and score each."
     ),
 )
 def post_safe_route(request: SafeRouteRequest) -> SafeRouteResponse:
-    graph = get_graph()
-    origin_node = nearest_node(request.origin.lat, request.origin.lon)
-    destination_node = nearest_node(request.destination.lat, request.destination.lon)
+    from app.routing.graph import get_graph_for_points, nearest_node
+    graph = get_graph_for_points(
+        request.origin.lat, request.origin.lon, 
+        request.destination.lat, request.destination.lon
+    )
+    
+    if not graph or len(graph) == 0:
+        raise HTTPException(
+            status_code=503, 
+            detail="Road network data unavailable for this area. Please check your internet connection or try a different region."
+        )
+
+    origin_node = nearest_node(graph, request.origin.lat, request.origin.lon)
+    destination_node = nearest_node(graph, request.destination.lat, request.destination.lon)
 
     weather_lat = (request.origin.lat + request.destination.lat) / 2.0
     weather_lon = (request.origin.lon + request.destination.lon) / 2.0
     weather = get_weather(weather_lat, weather_lon)
-    risk_scores = _score_graph_edges(graph, weather, datetime.utcnow())
 
-    try:
-        safe_path = safe_route(graph, origin_node, destination_node, request.alpha, risk_scores)
-        fastest_path = safe_route(graph, origin_node, destination_node, 0.0, risk_scores)
-    except (nx.NetworkXNoPath, nx.NodeNotFound) as exc:
-        raise HTTPException(status_code=404, detail="No drivable route found between the requested points.") from exc
+    from app.routing.astar import alternative_paths
+    paths = alternative_paths(graph, origin_node, destination_node, k=5)
+    
+    # Filter out empty paths or single-node "paths"
+    valid_paths = [p for p in paths if len(p) > 1]
+    
+    if not valid_paths:
+        if origin_node == destination_node:
+             detail = "Origin and destination are too close (snapped to the same junction)."
+        else:
+             detail = "No drivable route found. Keep clicks within the LA/Santa Monica area."
+        raise HTTPException(status_code=404, detail=detail)
 
-    route_summary, segments = _route_summary(graph, safe_path, risk_scores, request.alpha)
-    fastest_summary, _ = _route_summary(graph, fastest_path, risk_scores, 0.0)
+    # Scoped optimization: Only score edges in our candidate paths
+    risk_scores = _score_graph_edges(graph, weather, datetime.utcnow(), paths=valid_paths)
 
-    if fastest_summary.avg_risk_score <= 0:
-        risk_reduction_pct = 0.0
-    else:
-        reduction = fastest_summary.avg_risk_score - route_summary.avg_risk_score
-        risk_reduction_pct = round((reduction / fastest_summary.avg_risk_score) * 100.0, 1)
+    alternatives = []
+    for idx, path in enumerate(valid_paths):
+        summary = _route_summary(graph, path, risk_scores, alpha=request.alpha, route_id=f"route_{idx}")
+        alternatives.append(summary)
 
-    return SafeRouteResponse(
-        route=route_summary,
-        fastest=fastest_summary,
-        risk_reduction_pct=risk_reduction_pct,
-        segments=segments,
-    )
+    if alternatives:
+        best_idx = min(range(len(alternatives)), key=lambda i: alternatives[i].avg_risk_score)
+        alternatives[best_idx].is_safest = True
+
+    return SafeRouteResponse(alternatives=alternatives)
+
