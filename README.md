@@ -28,6 +28,7 @@
 - [What's New](#-whats-new-v120)
 - [Key Features](#-key-features)
 - [System Architecture](#-system-architecture)
+- [Formulas (Key Equations)](#-formulas-key-equations)
 - [Data Pipeline](#-data-pipeline)
 - [Machine Learning](#-machine-learning)
 - [Routing Engine](#-routing-engine)
@@ -44,7 +45,7 @@
 
 ## 🔭 Overview
 
-**STRIVE** (Spatio-Temporal Risk Intelligence and Vehicular Safety Engine) fuses **historical crash data**, **live weather**, and **real-time road-network graphs** to deliver per-segment risk scores and safety-optimised routes with full explainable AI (XAI) attribution.
+**STRIVE** (Spatio-Temporal Risk Intelligence and Vehicular Safety Engine) fuses **historical crash data**, **live weather**, and **real-time road-network graphs** to deliver per-segment risk scores a[...]
 
 Traditional navigation prioritises speed. STRIVE prioritises **safety**:
 
@@ -135,6 +136,37 @@ flowchart TD
 | **Weather** | OpenWeatherMap REST | Free tier, global coverage, 5-min in-process cache |
 | **Road Data** | OpenStreetMap via OSMnx | Free, global, rich metadata (road class, speed, geometry) |
 | **Deployment** | Docker 24 + Docker Compose | Reproducible, one-command full-stack startup |
+
+---
+
+## 🧮 Formulas (Key Equations)
+
+### 1) Segment risk score (model output)
+
+```text
+risk_score = P(incident | features) × 100
+```
+
+### 2) Risk-exposure routing edge cost (α-weighted)
+
+```text
+cost(u→v) = (1 − α) × travel_time_norm + α × (risk_norm × travel_time_norm)
+```
+
+### 3) Derived feature: rain_on_congestion
+
+```text
+speed_ratio = max(0.6 × speed_limit_kmh / 100, 0.1)
+rain_on_congestion = (precipitation_mm / 100) × (1 − min(speed_ratio, 1))
+```
+
+### 4) Route-level SHAP aggregation (conceptual)
+
+```text
+route_shap(feature) = average_over_segments( shap_segment(feature) )
+```
+
+> For full variable definitions, thresholds, and where each equation is applied in code, see **STRIVE_DEEP_DIVE.md**.
 
 ---
 
@@ -276,7 +308,7 @@ The critical innovation in the routing cost function:
 cost(u→v) = (1 - α) × travel_time_norm + α × (risk_norm × travel_time_norm)
 ```
 
-`risk_norm × travel_time_norm` = **Risk Exposure** — the expected danger accumulated *while traversing the edge*. A short high-risk edge costs less than a long high-risk edge, which is the physically correct behaviour.
+`risk_norm × travel_time_norm` = **Risk Exposure** — the expected danger accumulated *while traversing the edge*. A short high-risk edge costs less than a long high-risk edge, which is the phy[...]
 
 `α` (alpha) is the user-controlled safety weight:
 - `α = 0.0` → pure fastest route
