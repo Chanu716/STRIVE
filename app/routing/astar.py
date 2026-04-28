@@ -71,10 +71,14 @@ def _single_edge_weight(
     risk_scores: dict[tuple[Any, Any, Any], float],
     max_tt: float,
 ) -> float:
-    travel_component = min(travel_time_seconds(edge_data) / max_tt, 1.0)
+    tt = travel_time_seconds(edge_data)
+    travel_component = min(tt / max_tt, 1.0)
     risk = risk_scores.get((u, v, key), risk_scores.get((str(u), str(v), str(key)), DEFAULT_RISK_SCORE))
     risk_component = min(max(float(risk) / 100.0, 0.0), 1.0)
-    return alpha * risk_component + (1.0 - alpha) * travel_component
+    
+    # NEW: Weight risk by time to optimize for 'Risk Exposure' (Mean Risk)
+    # This ensures safety-toggled routes actually have lower average risk.
+    return (1.0 - alpha) * travel_component + alpha * (risk_component * travel_component)
 
 
 def _weight_function(
@@ -116,28 +120,32 @@ def alternative_paths(
     origin_node: Any,
     dest_node: Any,
     k: int = 3,
+    alpha: float = 0.0,
+    risk_scores: dict[tuple[Any, Any, Any], float] | None = None,
 ) -> list[list[Any]]:
-    """Return top K physically distinct paths ordered by travel time.
-
-    ``nx.shortest_simple_paths`` does not support MultiDiGraph, so we first
-    collapse parallel edges into a simple DiGraph keeping the minimum travel
-    time per (u, v) pair, run Yen's K-shortest-paths on that projection, and
-    return the resulting node sequences (which are valid in the original graph).
-    """
-    # Build a simple DiGraph projection with the minimum travel time edge.
+    """Return top K physically distinct paths ordered by the weighted cost (safety + time)."""
+    
+    # 1. Prepare simple DiGraph projection
     simple = nx.DiGraph()
-    for u, v, data in graph.edges(data=True):
-        tt = travel_time_seconds(data)
-        if simple.has_edge(u, v):
-            if tt < simple[u][v]["weight"]:
-                simple[u][v]["weight"] = tt
+    max_tt = travel_time_normalizer(graph)
+    
+    # 2. Project MultiDiGraph edges to simple DiGraph with minimum cost
+    for u, v, key, data in graph.edges(keys=True, data=True):
+        if risk_scores is not None:
+            cost = _single_edge_weight(u, v, key, data, alpha, risk_scores, max_tt)
         else:
-            simple.add_edge(u, v, weight=tt)
+            # Fallback to pure travel time if no risk scores provided
+            cost = travel_time_seconds(data)
+            
+        if simple.has_edge(u, v):
+            if cost < simple[u][v]["weight"]:
+                simple[u][v]["weight"] = cost
+        else:
+            simple.add_edge(u, v, weight=cost)
 
+    # 3. Find K shortest simple paths using Yen's algorithm
     try:
         generator = nx.shortest_simple_paths(simple, origin_node, dest_node, weight="weight")
         return list(itertools.islice(generator, k))
     except (nx.NetworkXNoPath, nx.NodeNotFound, nx.NetworkXNotImplemented):
         return []
-
-

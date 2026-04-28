@@ -27,7 +27,7 @@ FEATURE_CONFIG_PATH = Path(os.getenv("FEATURE_CONFIG_PATH", "models/feature_conf
 class ExplanationResult:
     """Full prediction payload returned by the inference layer."""
 
-    risk_score: int
+    risk_score: float
     probability: float
     shap_values: dict[str, float]
     expected_value: float
@@ -39,28 +39,30 @@ class _FallbackRiskModel:
     def __init__(self) -> None:
         self.feature_names_in_ = np.array(FEATURE_NAMES, dtype=object)
         self._weights = {
-            "precipitation_mm": 0.08,
-            "visibility_km": -0.05,
-            "wind_speed_ms": 0.03,
-            "temperature_c": -0.01,
-            "historical_accident_rate": 0.04,
-            "night_indicator": 0.45,
-            "road_class": 0.08,
-            "speed_limit_kmh": 0.006,
-            "rain_on_congestion": 0.6,
+            "precipitation_mm": 0.35,
+            "visibility_km": -0.25,
+            "wind_speed_ms": 0.12,
+            "temperature_c": -0.05,
+            "historical_accident_rate": 0.25,
+            "night_indicator": 1.2,
+            "road_class": 0.6,               # Highly sensitive to street type
+            "speed_limit_kmh": 0.045,        # Highly sensitive to speed
+            "rain_on_congestion": 1.5,
             "hour_of_day": 0.0,
             "day_of_week": 0.0,
             "month": 0.0,
         }
-        self._bias = -2.2
+        self._bias = -5.5  # Adjusted for higher weights
 
     def predict_proba(self, feature_matrix: np.ndarray) -> np.ndarray:
-        row = feature_matrix[0]
-        score = self._bias
-        for index, name in enumerate(FEATURE_NAMES):
-            score += float(row[index]) * self._weights.get(name, 0.0)
-        probability = 1.0 / (1.0 + math.exp(-score))
-        return np.array([[1.0 - probability, probability]], dtype=float)
+        probabilities = []
+        for row in feature_matrix:
+            score = self._bias
+            for index, name in enumerate(FEATURE_NAMES):
+                score += float(row[index]) * self._weights.get(name, 0.0)
+            prob = 1.0 / (1.0 + math.exp(-score))
+            probabilities.append([1.0 - prob, prob])
+        return np.array(probabilities, dtype=float)
 
     def explain(self, feature_vector: np.ndarray) -> ExplanationResult:
         shap_values = {
@@ -69,7 +71,7 @@ class _FallbackRiskModel:
         }
         probability = float(self.predict_proba(feature_vector.reshape(1, -1))[0][1])
         return ExplanationResult(
-            risk_score=int(round(probability * 100)),
+            risk_score=float(probability * 100.0),
             probability=probability,
             shap_values=shap_values,
             expected_value=float(self._bias),
@@ -125,7 +127,7 @@ def explain_prediction(feature_vector: np.ndarray) -> ExplanationResult:
         return model.explain(feature_vector)
 
     probability = float(model.predict_proba(feature_vector.reshape(1, -1))[0][1])
-    risk_score = int(round(probability * 100))
+    risk_score = float(probability * 100.0)
 
     try:
         shap_values, expected_value = _compute_native_shap(model, feature_vector)
@@ -143,6 +145,27 @@ def explain_prediction(feature_vector: np.ndarray) -> ExplanationResult:
     )
 
 
-def run_inference(feature_vector: np.ndarray) -> int:
+def run_inference(feature_vector: np.ndarray) -> float:
     """Return a 0-100 risk score for the given feature vector."""
-    return explain_prediction(feature_vector).risk_score
+    return float(explain_prediction(feature_vector).risk_score)
+
+
+def explain_segments(feature_inputs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Batch explain multiple segments for route-level analysis."""
+    from app.ml.features import build_feature_vector
+    results = []
+    for inp in feature_inputs:
+        fv = build_feature_vector(inp)
+        res = explain_prediction(fv)
+        
+        # Format for route.py summary logic
+        top_factors = []
+        for name, shap_val in res.shap_values.items():
+            if abs(shap_val) > 0.05:
+                top_factors.append({"feature": name, "shap": float(shap_val)})
+        
+        results.append({
+            "risk_score": res.risk_score,
+            "top_factors": top_factors
+        })
+    return results

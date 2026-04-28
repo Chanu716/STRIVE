@@ -33,12 +33,13 @@ services:
       - ./data:/app/data
       - ./models:/app/models
       - ./reports:/app/reports
+      - ./app:/app/app          # live-reload: Python changes take effect on restart, no rebuild needed
     depends_on:
       db:
         condition: service_healthy
     command: >
       sh -c "alembic upgrade head &&
-      uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 volumes:
   pgdata:

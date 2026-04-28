@@ -6,33 +6,21 @@ import { FileText, Info, X } from "lucide-react";
 interface ShapModalProps {
   isOpen: boolean;
   onClose: () => void;
-  segmentData: {
+  data: {
     title: string;
     risk: string;
     label: string;
     metric: string;
+    factors: Array<{ label: string; shap: number }>;
+    summary: string;
   } | null;
 }
 
-export function ShapModal({ isOpen, onClose, segmentData }: ShapModalProps) {
-  if (!segmentData) return null;
+export function ShapModal({ isOpen, onClose, data }: ShapModalProps) {
+  if (!data) return null;
 
-  // Mock SHAP data based on risk level
-  const factors = segmentData.risk === "HIGH" 
-    ? [
-        { feature: "precipitation_mm", shap: 18.4, label: "Heavy rain" },
-        { feature: "historical_accident_rate", shap: 12.1, label: "High-risk location" },
-        { feature: "night_indicator", shap: 6.3, label: "Night-time driving" },
-        { feature: "visibility_km", shap: 4.2, label: "Reduced visibility" }
-      ]
-    : [
-        { feature: "historical_accident_rate", shap: 5.4, label: "Congestion zone" },
-        { feature: "road_class", shap: 3.1, label: "Commercial arterial" }
-      ];
-
-  const summary = segmentData.risk === "HIGH" 
-    ? "HIGH RISK. Heavy rain on a historically dangerous segment randomly combined with night-time driving."
-    : "MEDIUM RISK. Congestion on standard commercial road, moderate chance of minor scrape incident.";
+  const factors = data.factors || [];
+  const summary = data.summary || "No detailed analysis available for this segment.";
 
   return (
     <AnimatePresence>
@@ -77,12 +65,12 @@ export function ShapModal({ isOpen, onClose, segmentData }: ShapModalProps) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "1rem" }}>
               <div>
                 <span className="text-meta" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <FileText size={14} style={{ color: "var(--wine-primary)"}} /> Segment ID: {segmentData.label}
+                  <FileText size={14} style={{ color: "var(--wine-primary)"}} /> ID: {data.label}
                 </span>
-                <div style={{ fontSize: "1.2rem", fontWeight: 800, marginTop: "0.25rem" }}>{segmentData.metric}</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 800, marginTop: "0.25rem" }}>{data.metric}</div>
               </div>
-              <span className={`badge ${segmentData.risk === 'HIGH' ? 'badge-rose' : 'badge-amber'}`} style={{ padding: "0.5rem 1rem", fontSize: "0.8rem" }}>
-                {segmentData.risk} RISK
+              <span className={`badge ${data.risk === 'HIGH' || data.risk === 'CRITICAL' ? 'badge-rose' : 'badge-amber'}`} style={{ padding: "0.5rem 1rem", fontSize: "0.8rem" }}>
+                {data.risk}
               </span>
             </div>
 
