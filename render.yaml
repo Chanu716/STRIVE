@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: strive-api
+    env: docker
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET_NAME
+        value: strive-assets
+      - key: OWM_API_KEY
+        sync: false

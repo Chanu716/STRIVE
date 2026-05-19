@@ -4,16 +4,27 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+import contextlib
+
 from app.db.session import SessionLocal
 from app.ml.inference import load_model
 from app.routers.explain import router as explain_router
 from app.routers.risk import router as risk_router
 from app.routers.route import router as route_router
+from app.storage import download_assets_from_supabase
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Download ML models and graph files from Supabase Storage (if configured)
+    download_assets_from_supabase()
+    yield
 
 
 app = FastAPI(
     title="STRIVE Risk API",
     version="0.1.0",
+    lifespan=lifespan,
     description=(
         "Backend API for STRIVE road-segment risk scoring. "
         "This isolated implementation covers the M3 risk endpoints and uses "

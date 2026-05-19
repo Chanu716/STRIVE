@@ -12,6 +12,29 @@ const TIER: Record<string, { color: string; label: string; width: number; opacit
   risky:  { color: "#ef4444", label: "🚨 Risky",   width: 5,  opacity: 0.8 },
 };
 
+const LOS_ANGELES_CENTER: [number, number] = [-118.2437, 34.0522];
+
+// Approximate Los Angeles coverage boundary for visual availability guidance.
+const LOS_ANGELES_COVERAGE: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature",
+      properties: { name: "Los Angeles, California" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [-118.67, 33.70],
+          [-118.15, 33.70],
+          [-118.15, 34.34],
+          [-118.67, 34.34],
+          [-118.67, 33.70],
+        ]],
+      },
+    },
+  ],
+};
+
 interface LiveMapProps {
   height?: string;
   onRoutesFound?: (routes: any[]) => void;
@@ -61,14 +84,44 @@ export function LiveMap({ height = "400px", onRoutesFound, activeRouteId }: Live
         },
         layers: [{ id: "osm", type: "raster", source: "osm", minzoom: 0, maxzoom: 19 }],
       },
-      center: [80.648, 16.506], // Center on Vijayawada
-      zoom: 12,
+      center: LOS_ANGELES_CENTER,
+      zoom: 10,
       attributionControl: false,
     });
 
     map.current.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
 
-    map.current.on("load", () => { isMapLoaded.current = true; });
+    map.current.on("load", () => {
+      isMapLoaded.current = true;
+
+      if (map.current && !map.current.getSource("la-coverage")) {
+        map.current.addSource("la-coverage", {
+          type: "geojson",
+          data: LOS_ANGELES_COVERAGE,
+        });
+
+        map.current.addLayer({
+          id: "la-coverage-fill",
+          type: "fill",
+          source: "la-coverage",
+          paint: {
+            "fill-color": "#2563eb",
+            "fill-opacity": 0.12,
+          },
+        });
+
+        map.current.addLayer({
+          id: "la-coverage-outline",
+          type: "line",
+          source: "la-coverage",
+          paint: {
+            "line-color": "#1d4ed8",
+            "line-width": 2,
+            "line-opacity": 0.85,
+          },
+        });
+      }
+    });
 
     map.current.on("click", (e) => {
       const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
@@ -113,7 +166,8 @@ export function LiveMap({ height = "400px", onRoutesFound, activeRouteId }: Live
     }, 3000);
 
     try {
-      const res = await fetch("http://localhost:8000/v1/route/safe", {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${baseUrl}/v1/route/safe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
