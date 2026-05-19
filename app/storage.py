@@ -25,7 +25,7 @@ def download_assets_from_supabase() -> None:
         assets = [
             ("model.pkl", os.getenv("MODEL_PATH", "models/model.pkl")),
             ("feature_config.json", os.getenv("FEATURE_CONFIG_PATH", "models/feature_config.json")),
-            ("road_network.graphml", os.getenv("GRAPH_PATH", "data/raw/road_network.graphml"))
+            ("road_network.graphml.gz", os.getenv("GRAPH_PATH", "data/raw/road_network.graphml"))
         ]
         
         for file_name, local_path_str in assets:
@@ -43,8 +43,16 @@ def download_assets_from_supabase() -> None:
             try:
                 # In Supabase Storage, we expect files to be in the root of the bucket
                 response = supabase.storage.from_(bucket_name).download(file_name)
-                with open(local_path, "wb") as f:
-                    f.write(response)
+                
+                if file_name.endswith('.gz'):
+                    import gzip
+                    decompressed_data = gzip.decompress(response)
+                    with open(local_path, "wb") as f:
+                        f.write(decompressed_data)
+                else:
+                    with open(local_path, "wb") as f:
+                        f.write(response)
+                        
                 logger.info(f"Successfully downloaded {file_name}")
             except Exception as e:
                 logger.error(f"Failed to download {file_name} from Supabase: {e}")
